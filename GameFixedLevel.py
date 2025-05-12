@@ -5,6 +5,7 @@ import pygame
 import pygame.freetype
 
 class GameRect:
+    """"GameRect is used to store a rect in floats and it interacts with pygame.Rect"""
     def __init__(self,x,y,w,h):
         self.x      = float(x)
         self.y      = float(y)
@@ -30,6 +31,8 @@ class GameRect:
         return self.y
 
 class GameFixedLevel:
+    """GameFixedLevel is the class that encompasses the game and provides the run method. There are many ways to customize the behavior of the class"""
+
     def __init__(self, name, item_kinds, screen_size=(800, 600), background_color=(0, 0, 0), text_color=(50, 255, 255), fps=60,
                  level=1, always=None, draw=None, moves=None, box=None):
 

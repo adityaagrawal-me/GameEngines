@@ -1,9 +1,15 @@
+
+# this creates th bricks game using the GameFixedLevel engine.
+
 import numpy as np
 import random
-
 import pygame
 
 from GameFixedLevel import *
+
+# -
+# parameters for the game
+# -
 
 GAME_SIZE    = [600,800]
 PADDLE_SIZE  = [150,20]
@@ -15,6 +21,10 @@ BRICK_ROWS   = 5
 BRICK_COLS   = 20
 BRICK_HEIGHT = 40
 FPS          = 60
+
+# -
+# game specific functions
+# -
 
 def get_random_velocity():
     v = [0.0,0.0]
@@ -59,11 +69,16 @@ def brick_dead(me):
     me.player.score += 1
     return True
 
-
-game = GameFixedLevel('Bricks', ['player', 'ball', 'brick', 'bullet', 'touch'], GAME_SIZE, always=game_always, fps=FPS, box=[GAME_SIZE[0],GAME_SIZE[1]-200])
-
 def player_reset(me):
     me.fired = -20
+
+# -
+# initialization of the game
+# -
+
+game = GameFixedLevel('Bricks', ['player', 'ball', 'brick', 'bullet', 'touch'], GAME_SIZE, always=game_always, fps=FPS,
+                      box=[GAME_SIZE[0], GAME_SIZE[1] - 200])
+
 
 p = Item(game, name='', kind='player', size=PADDLE_SIZE, init_loc=[(GAME_SIZE[0] - PADDLE_SIZE[0]) // 2, GAME_SIZE[1] - PADDLE_SIZE[1] - 250], color=(255, 0, 0),
          moves={pygame.K_UP: [0, -PADDLE_SPEED], pygame.K_DOWN: [0, PADDLE_SPEED], pygame.K_RIGHT: [PADDLE_SPEED, 0], pygame.K_LEFT: [-PADDLE_SPEED, 0],
@@ -74,6 +89,8 @@ b = Item(game, name='b1', kind='ball', size=BALL_SIZE, init_loc=[400, 150], colo
                                              'player':ball_bounce, 'brick': GameFixedLevel.kill_target_and_bounce})
 b.player = p
 game.player = p
+
+# initializing all the bricks here
 for i in range(BRICK_COLS):
     for j in range(BRICK_ROWS):
         bw = GAME_SIZE[0] // BRICK_COLS
@@ -81,9 +98,17 @@ for i in range(BRICK_COLS):
         brick = Item(game, kind='brick', size=[bw-1, bh-1], init_loc=[i * bw, j * bh], color=(120, 120, 120), live_lost_fcn=brick_dead)
         brick.player = p
 
+# -
+# add touchpad elements for use on mobile devices.
+# -
+
 game.create_move_touchpad(p,loc=['bottom','right'])
-game.create_key_touchpad (p,loc=['bottom',-100 ] ,key=pygame.K_SPACE)
+game.create_key_touchpad (p,loc=['bottom','left' ] ,key=pygame.K_SPACE, pad_size=[100,100])
 game.create_escape_touchpad(loc=['top'   ,'right'])
+
+# -
+# run the game
+# -
 
 async def main():
     await game.run()

@@ -1,3 +1,8 @@
+
+# this file is used to create the pygbag web.zip file to upload game to itch.io. This used the game.tmpl file.
+# to use this file, please comment out asyncio.run(main()) in the file being included.
+# e.g. if you are building g1_pong, please go to g1_pong and comment out the asyncio.run(main()) line at the bottom
+
 import asyncio
 import pygame
 import pygame.freetype
