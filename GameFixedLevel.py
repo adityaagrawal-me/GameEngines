@@ -5,7 +5,7 @@ import pygame
 import pygame.freetype
 
 class GameRect:
-    """"GameRect is used to store a rect in floats and it interacts with pygame.Rect"""
+    """"GameRect is used to store a rect in floats for smooth motion and it interacts with pygame.Rect"""
     def __init__(self,x,y,w,h):
         self.x      = float(x)
         self.y      = float(y)
@@ -29,6 +29,28 @@ class GameRect:
 
     def top(self):
         return self.y
+
+    def bottom(self):
+        return self.y+self.height
+
+    def left(self):
+        return self.x
+
+    def right(self):
+        return self.x+self.width
+
+    def after(self,dir, buffer=0):
+        after_xy = [self.x,self.y]
+        if dir[0]>0:
+            after_xy[0] = self.x - self.width - buffer
+        elif dir[0]<0:
+            after_xy[0] = self.x + self.width + buffer
+        if dir[1]>0:
+            after_xy[1] = self.y - self.height - buffer
+        elif dir[1]<0:
+            after_xy[1] = self.y + self.height + buffer
+        return after_xy
+
 
 class GameFixedLevel:
     """GameFixedLevel is the class that encompasses the game and provides the run method. There are many ways to customize the behavior of the class"""
@@ -60,6 +82,7 @@ class GameFixedLevel:
         self.moves      = moves
         self.init_box   = box
         self.box        = None
+        self.pause      = False
 
         # Set up screen
         self.screen = pygame.display.get_surface()
@@ -85,6 +108,7 @@ class GameFixedLevel:
             self.mouse_pressed = False
             self.mouse_pos     = None
             self.finger_pos    = {}
+            self.pause         = False
 
             if self.init_box is not None:
                 self.box = pygame.Rect(0,0,*self.init_box)
@@ -208,29 +232,35 @@ class GameFixedLevel:
                 if len(self.finger_pos.keys())==0:
                     self.mouse_pos = pygame.mouse.get_pos()
 
+            # Update
             self.update()
-            for i in self.items.values():
-                for j in i:
-                    j.update()
-
-            # Drawing
-            self.screen.fill(self.background_color)
-            if self.draw_fcn is not None:
-                self.draw_fcn(self)
-
-            if 'touch' in self.items:
-                for j in self.items['touch']:
-                    j.draw()
-            for i in self.items.keys():
-                if i == 'touch' or i == 'player':
-                    continue
-                for j in self.items[i]:
-                    j.draw()
             if 'player' in self.items:
                 for j in self.items['player']:
-                    j.draw()
+                    j.update()
+            for i in self.items.keys():
+                if i == 'player':
+                    continue
+                for j in self.items[i]:
+                    j.update()
 
-            self.draw_text()
+            if not self.pause:
+                # Drawing
+                self.screen.fill(self.background_color)
+                if self.draw_fcn is not None:
+                    self.draw_fcn(self)
+
+                if 'touch' in self.items:
+                    for j in self.items['touch']:
+                        j.draw()
+                for i in self.items.keys():
+                    if i == 'touch' or i == 'player':
+                        continue
+                    for j in self.items[i]:
+                        j.draw()
+                if 'player' in self.items:
+                    for j in self.items['player']:
+                        j.draw()
+                self.draw_text()
 
             self.counter += 1
             if self.counter == 10000000:
@@ -245,7 +275,7 @@ class GameFixedLevel:
         pygame.quit()
 
     @staticmethod
-    def push_out(r1, r2):
+    def push_out(r1, r2, make_change=True):
         """Pushes rect1 out of rect2 after a collision."""
         # Determine collision direction
         rect1 = r1.r()
@@ -266,16 +296,19 @@ class GameFixedLevel:
         if abs(dx) == abs(dy):
             rect1.x += dx
             rect1.y += dy
-            r1.x = float(rect1.x)
-            r1.y = float(rect1.y)
+            if make_change:
+                r1.x = float(rect1.x)
+                r1.y = float(rect1.y)
             return [dx, dy]
         elif abs(dx) < abs(dy):
             rect1.x += dx
-            r1.x = float(rect1.x)
+            if make_change:
+                r1.x = float(rect1.x)
             return [dx,0]
         else:
             rect1.y += dy
-            r1.y = float(rect1.y)
+            if make_change:
+                r1.y = float(rect1.y)
             return [0, dy]
 
     @staticmethod
@@ -293,6 +326,10 @@ class GameFixedLevel:
             c.velocity[0] *= -1
         if direction[1] != 0:
             c.velocity[1] *= -1
+
+    @staticmethod
+    def kill_me(c, b):
+        c.live_lost()
 
     @staticmethod
     def kill_both(c, b):
@@ -400,7 +437,7 @@ class Item:
     def __init__(self, parent, size, name='', kind='', init_loc=None, velocity=None, draw_fcn=pygame.draw.rect,
                  adv_draw_fcn=None,
                  color=(255, 255, 255), always=None, moves=None, collides=None, box=None, lives=1,
-                 live_lost_invincibility=0, live_lost_color=None, live_lost_fcn=None, image_bmp=None,
+                 live_lost_pause=0,live_lost_invincibility=0, live_lost_color=None, live_lost_fcn=None, image_bmp=None,
                  image_inv_bmp=None, reset_fcn=None):
 
         self.parent    = parent
@@ -441,6 +478,7 @@ class Item:
         self.parent.add_item(self)
         self.live_lost_invincibility = live_lost_invincibility
         self.live_lost_color = live_lost_color
+        self.live_lost_pause = live_lost_pause
         if self.live_lost_color is None:
             self.live_lost_color = (self.color[0]//2,self.color[1]//2,self.color[2]//2)
         self.live_lost_fcn = live_lost_fcn
@@ -505,7 +543,8 @@ class Item:
                     else:
                         self.pause = -1
                 else:
-                    self.invincible = self.live_lost_invincibility
+                    self.pause      = self.live_lost_pause
+                    self.invincible = self.live_lost_pause + self.live_lost_invincibility
 
     def add_to_var(self,var,value):
         curr = getattr(self, var)
@@ -534,8 +573,15 @@ class Item:
             self.rect.y = 0
 
     def do_boundary(self, cond, side, ix):
-        if cond and side in self.collides:
-            collides_fcn = self.collides[side]
+        if cond:
+            if side in self.collides:
+                collides_fcn = self.collides[side]
+            elif 'box_fit' in self.collides:
+                collides_fcn = self.collides['box_fit']
+            else:
+                return False
+            if collides_fcn == 'hold':
+                self.rect.clamp_ip(self.get_box())
             if  collides_fcn == 'bounce':
                 self.rect.clamp_ip(self.get_box())
                 self.velocity[ix] *= -1
@@ -574,11 +620,11 @@ class Item:
                 self.do_action(i)
 
         # Collision with the bounds
-        r = self.rect.r()
-        if not self.do_boundary(r.top <= self.box.top      , 'top'   , 1):
-            if not self.do_boundary(r.bottom >= self.box.bottom, 'bottom', 1):
-                if not self.do_boundary(r.left <= self.box.left    , 'left'  , 0):
-                    self.do_boundary(r.right >= self.box.right  , 'right' , 0)
+        r = self.rect
+        if not self.do_boundary(r.top() <= self.box.top      , 'top'   , 1):
+            if not self.do_boundary(r.bottom() >= self.box.bottom, 'bottom', 1):
+                if not self.do_boundary(r.left() <= self.box.left    , 'left'  , 0):
+                    self.do_boundary(r.right() >= self.box.right  , 'right' , 0)
 
         # Collision with other items
         for kind in self.collides.keys():
@@ -586,17 +632,16 @@ class Item:
                 item = self.check_if_collides_with(self.rect,kind)
                 if item is not None:
                     collides_fcn = self.collides[kind]
-                    collides_fcn(self,item)
-
-        if 'box_fit' in self.collides:
-            collides_fcn = self.collides['box_fit']
-            if collides_fcn == 'hold':
-                self.rect.clamp_ip(self.box)
-            elif collides_fcn == 'kill':
-                if not self.rect.r().colliderect(self.box):
-                    self.live_lost()
-            else:
-                collides_fcn(self, self.box)
+                    if collides_fcn == 'hold':
+                        self.rect.clamp_ip(item)
+                    elif collides_fcn == 'kill me':
+                        GameFixedLevel.kill_me(self,item)
+                    elif collides_fcn == 'kill target':
+                        GameFixedLevel.kill_target(self,item)
+                    elif collides_fcn == 'kill both':
+                        GameFixedLevel.kill_both(self, item)
+                    else:
+                        collides_fcn(self, item)
 
     def do_action(self, event):
         if event in self.moves:
@@ -614,3 +659,11 @@ class Item:
                 return i
         return None
 
+    def forward_rect(self,cnt):
+        x    = self.rect.x
+        y    = self.rect.y
+        w    = self.rect.width
+        h    = self.rect.height
+        new_x = self.rect.x + self.velocity[0]*cnt
+        new_y = self.rect.y + self.velocity[1]*cnt
+        return pygame.Rect(min(new_x,x),min(new_y,y),abs(new_x-x)+w,abs(new_y-y)+h)

@@ -16,7 +16,7 @@ PADDLE_SPEED = 4.5
 BALL_SIZE    = [20,20]
 BALL_SPEED   = 2.5
 MIN_SPEED    = 0.6
-FPS          = 200
+FPS          = 60
 
 # -
 # game specific functions
@@ -81,21 +81,28 @@ def ball_bounce(bl, pl):
 game = GameFixedLevel('Pong', ['player','ball'],GAME_SIZE,box=ACTUAL_SIZE,text_color=(255, 255, 255),fps=FPS)
 
 # player left is initialized and the keys a s d w are mapped to its movements
-p1 = Item(game, name='left ', kind='player', size=PADDLE_SIZE, init_loc=[20, (GAME_SIZE[0] - PADDLE_SIZE[0]) // 2], color=(255, 0, 0),
-          moves={pygame.K_w: [0, -PADDLE_SPEED], pygame.K_s: [0, PADDLE_SPEED], pygame.K_d: [PADDLE_SPEED, 0], pygame.K_a: [-PADDLE_SPEED, 0]},
+p1 = Item(game, name='left ', kind='player', size=PADDLE_SIZE, init_loc=[20, (GAME_SIZE[0] - PADDLE_SIZE[0]) // 2],
+          color=(255, 0, 0),
+          moves={pygame.K_w: [0, -PADDLE_SPEED], pygame.K_s: [0, PADDLE_SPEED], pygame.K_d: [PADDLE_SPEED, 0],
+                 pygame.K_a: [-PADDLE_SPEED, 0]},
           collides={'box_fit': 'hold'},
-          lives = 3)
+          lives=3)
 
 # player left is initialized and the keys left, down, right, up are mapped to its movements
-p2 = Item(game, name='right', kind='player', size=PADDLE_SIZE, init_loc=[GAME_SIZE[1] - PADDLE_SIZE[1] - 20, (GAME_SIZE[0] - PADDLE_SIZE[0]) // 2], color=(0, 0, 255),
-          moves={pygame.K_UP: [0, -PADDLE_SPEED], pygame.K_DOWN: [0, PADDLE_SPEED], pygame.K_RIGHT: [PADDLE_SPEED, 0], pygame.K_LEFT: [-PADDLE_SPEED, 0]},
+p2 = Item(game, name='right', kind='player', size=PADDLE_SIZE,
+          init_loc=[GAME_SIZE[1] - PADDLE_SIZE[1] - 20, (GAME_SIZE[0] - PADDLE_SIZE[0]) // 2], color=(0, 0, 255),
+          moves={pygame.K_UP: [0, -PADDLE_SPEED], pygame.K_DOWN: [0, PADDLE_SPEED], pygame.K_RIGHT: [PADDLE_SPEED, 0],
+                 pygame.K_LEFT: [-PADDLE_SPEED, 0]},
           collides={'box_fit': 'hold'},
-          lives = 3)
+          lives=3)
 
 # ball is initialized and functions defined above are mapped to certain actions.
-b = Item(game, name='b', kind='ball', size=BALL_SIZE, init_loc=[(GAME_SIZE[0] - BALL_SIZE[0]) // 2, (GAME_SIZE[1] - BALL_SIZE[1]) // 2], color=(255, 255, 255), velocity=get_random_velocity(),
-         draw_fcn=pygame.draw.ellipse, collides={'top': 'bounce', 'bottom': 'bounce', 'left': ball_left, 'right': ball_right,
-                                                 'player': ball_bounce})
+b = Item(game, name='b', kind='ball', size=BALL_SIZE,
+         init_loc=[(GAME_SIZE[0] - BALL_SIZE[0]) // 2, (GAME_SIZE[1] - BALL_SIZE[1]) // 2], color=(255, 255, 255),
+         velocity=get_random_velocity(),
+         draw_fcn=pygame.draw.ellipse,
+         collides={'top': 'bounce', 'bottom': 'bounce', 'left': ball_left, 'right': ball_right,
+                   'player': ball_bounce})
 b.player_left  = p1
 b.player_right = p2
 
